@@ -146,15 +146,18 @@ def tool_status():
     batch_size = 5000
     offset = 0
     error_info = None
-    while offset < count:
+    while True:
         try:
             batch = col.get(include=["metadatas"], limit=batch_size, offset=offset)
-            for m in batch["metadatas"]:
+            rows = batch["metadatas"]
+            for m in rows:
                 w = m.get("wing", "unknown")
                 r = m.get("room", "unknown")
                 wings[w] = wings.get(w, 0) + 1
                 rooms[r] = rooms.get(r, 0) + 1
-            offset += batch_size
+            offset += len(rows)
+            if len(rows) < batch_size:
+                break
         except Exception as e:
             error_info = f"Partial result, failed at offset {offset}: {str(e)}"
             break
@@ -213,16 +216,19 @@ def tool_list_wings():
     batch_size = 5000
     offset = 0
     try:
-        total = col.count()
+        col.count()  # verify collection is accessible
     except Exception as e:
         return {"wings": {}, "error": str(e)}
-    while offset < total:
+    while True:
         try:
             batch = col.get(include=["metadatas"], limit=batch_size, offset=offset)
-            for m in batch["metadatas"]:
+            rows = batch["metadatas"]
+            for m in rows:
                 w = m.get("wing", "unknown")
                 wings[w] = wings.get(w, 0) + 1
-            offset += batch_size
+            offset += len(rows)
+            if len(rows) < batch_size:
+                break
         except Exception as e:
             return {
                 "wings": wings,
@@ -241,19 +247,22 @@ def tool_list_rooms(wing: str = None):
     offset = 0
     where = {"wing": wing} if wing else None
     try:
-        total = col.count()
+        col.count()  # verify collection is accessible
     except Exception as e:
         return {"wing": wing or "all", "rooms": {}, "error": str(e)}
-    while offset < total:
+    while True:
         try:
             kwargs = {"include": ["metadatas"], "limit": batch_size, "offset": offset}
             if where:
                 kwargs["where"] = where
             batch = col.get(**kwargs)
-            for m in batch["metadatas"]:
+            rows = batch["metadatas"]
+            for m in rows:
                 r = m.get("room", "unknown")
                 rooms[r] = rooms.get(r, 0) + 1
-            offset += batch_size
+            offset += len(rows)
+            if len(rows) < batch_size:
+                break
         except Exception as e:
             return {
                 "wing": wing or "all",
@@ -272,19 +281,22 @@ def tool_get_taxonomy():
     batch_size = 5000
     offset = 0
     try:
-        total = col.count()
+        col.count()  # verify collection is accessible
     except Exception as e:
         return {"taxonomy": {}, "error": str(e)}
-    while offset < total:
+    while True:
         try:
             batch = col.get(include=["metadatas"], limit=batch_size, offset=offset)
-            for m in batch["metadatas"]:
+            rows = batch["metadatas"]
+            for m in rows:
                 w = m.get("wing", "unknown")
                 r = m.get("room", "unknown")
                 if w not in taxonomy:
                     taxonomy[w] = {}
                 taxonomy[w][r] = taxonomy[w].get(r, 0) + 1
-            offset += batch_size
+            offset += len(rows)
+            if len(rows) < batch_size:
+                break
         except Exception as e:
             return {
                 "taxonomy": taxonomy,
